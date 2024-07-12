@@ -73,12 +73,14 @@ update_game :: proc() {
     // Physics. ////////////////////////////////////////////////////////////////
     // Ball-paddle collision.
     if ball_pos.x <= left_paddle_pos.x + PADDLE_WIDTH &&\
+            ball_pos_prev.x >= left_paddle_pos.x + PADDLE_WIDTH &&\
             ball_pos.y > left_paddle_pos.y - BALL_HEIGHT &&\
             ball_pos.y < left_paddle_pos.y + PADDLE_HEIGHT {
         ball_pos.x = left_paddle_pos.x + PADDLE_WIDTH
         ball_vel.x *= -1.05
         ball_vel.y *= 1.05
     } else if ball_pos.x >= right_paddle_pos.x - BALL_WIDTH &&\
+            ball_pos_prev.x <= right_paddle_pos.x - BALL_WIDTH &&\
             ball_pos.y > right_paddle_pos.y - BALL_HEIGHT &&\
             ball_pos.y < right_paddle_pos.y + PADDLE_HEIGHT {
         ball_pos.x = right_paddle_pos.x - BALL_WIDTH
@@ -110,6 +112,8 @@ update_game :: proc() {
         right_paddle_pos.y = 0
         right_paddle_vel.y = max(0, right_paddle_vel.y)
     }
+
+    ball_pos_prev = ball_pos
 
     // Update. /////////////////////////////////////////////////////////////////
     ball_pos += ball_vel * frame_time
