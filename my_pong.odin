@@ -20,9 +20,6 @@ right_paddle_pos := rl.Vector2{INITIAL_SCREEN_WIDTH - 2 * PADDLE_WIDTH, 0.5 * IN
 left_paddle_vel : rl.Vector2
 right_paddle_vel : rl.Vector2
 
-Direction :: enum{North, South}
-ai_paddle_travel_direction : Direction
-
 BALL_COLOR :: rl.RAYWHITE
 BALL_HEIGHT : f32 : 24
 BALL_WIDTH : f32 : 24
@@ -65,23 +62,12 @@ update_game :: proc() {
     }
 
     // AI.
-    switch ai_paddle_travel_direction {
-    case .North:
-        if ball_pos.y + 0.5 * BALL_HEIGHT < left_paddle_pos.y + 0.25 * PADDLE_HEIGHT {
-            left_paddle_vel.y = -PADDLE_SPEED
-        } else if ball_pos.y + 0.5 * BALL_HEIGHT > left_paddle_pos.y + 0.75 * PADDLE_HEIGHT {
-            left_paddle_vel.y = PADDLE_SPEED
-        } else {
-            left_paddle_vel.y = 0
-        }
-    case .South:
-        if ball_pos.y + 0.5 * BALL_HEIGHT < left_paddle_pos.y + 0.25 * PADDLE_HEIGHT {
-            left_paddle_vel.y = -PADDLE_SPEED
-        } else if ball_pos.y + 0.5 * BALL_HEIGHT > left_paddle_pos.y + 0.75 * PADDLE_HEIGHT {
-            left_paddle_vel.y = PADDLE_SPEED
-        } else {
-            left_paddle_vel.y = 0
-        }
+    if ball_pos.y + BALL_HEIGHT / 2 < left_paddle_pos.y + 0.25 * PADDLE_HEIGHT {
+        left_paddle_vel.y = -PADDLE_SPEED
+    } else if ball_pos.y + BALL_HEIGHT / 2 > left_paddle_pos.y + 0.75 * PADDLE_HEIGHT {
+        left_paddle_vel.y = PADDLE_SPEED
+    } else {
+        left_paddle_vel.y = 0
     }
 
     // Physics.
