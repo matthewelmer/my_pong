@@ -62,7 +62,13 @@ update_game :: proc() {
     }
 
     // AI. /////////////////////////////////////////////////////////////////////
-    left_paddle_vel.y = math.clamp(ball_vel.y, -PADDLE_SPEED, PADDLE_SPEED)
+    if ball_pos.y + 0.5 * BALL_HEIGHT < left_paddle_pos.y + 0.4 * PADDLE_HEIGHT {
+        left_paddle_vel.y = -PADDLE_SPEED
+    } else if ball_pos.y + 0.5 * BALL_HEIGHT > left_paddle_pos.y + 0.6 * PADDLE_HEIGHT {
+        left_paddle_vel.y = PADDLE_SPEED
+    } else {
+        left_paddle_vel.y = math.clamp(ball_vel.y, -PADDLE_SPEED, PADDLE_SPEED)
+    }
 
     // Physics. ////////////////////////////////////////////////////////////////
     // Ball-paddle collision.
