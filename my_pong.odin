@@ -62,13 +62,7 @@ update_game :: proc() {
     }
 
     // AI.
-    if ball_pos.y + BALL_HEIGHT / 2 < left_paddle_pos.y + 0.25 * PADDLE_HEIGHT {
-        left_paddle_vel.y = -PADDLE_SPEED
-    } else if ball_pos.y + BALL_HEIGHT / 2 > left_paddle_pos.y + 0.75 * PADDLE_HEIGHT {
-        left_paddle_vel.y = PADDLE_SPEED
-    } else {
-        left_paddle_vel.y = 0
-    }
+    left_paddle_vel.y = math.clamp(ball_vel.y, -PADDLE_SPEED, PADDLE_SPEED)
 
     // Physics.
     if ball_pos.x <= left_paddle_pos.x + PADDLE_WIDTH &&\
