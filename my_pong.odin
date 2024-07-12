@@ -23,7 +23,7 @@ right_paddle_vel : rl.Vector2
 BALL_COLOR :: rl.RAYWHITE
 BALL_HEIGHT : f32 : 24
 BALL_WIDTH : f32 : 24
-BALL_INITIAL_SPEED : f32 : 100
+BALL_INITIAL_SPEED : f32 : 200
 BALL_INITIAL_VELOCITY :: rl.Vector2{
     BALL_INITIAL_SPEED / math.SQRT_TWO, BALL_INITIAL_SPEED / math.SQRT_TWO
 }
@@ -47,7 +47,7 @@ main :: proc() {
 }
 
 update_game :: proc() {
-    // Query
+    // Query. //////////////////////////////////////////////////////////////////
     frame_time = rl.GetFrameTime()
     screen_height = f32(rl.GetScreenHeight())
     screen_width = f32(rl.GetScreenWidth())
@@ -61,22 +61,26 @@ update_game :: proc() {
         right_paddle_vel.y = 0
     }
 
-    // AI.
+    // AI. /////////////////////////////////////////////////////////////////////
     left_paddle_vel.y = math.clamp(ball_vel.y, -PADDLE_SPEED, PADDLE_SPEED)
 
-    // Physics.
+    // Physics. ////////////////////////////////////////////////////////////////
+    // Ball-paddle collision.
     if ball_pos.x <= left_paddle_pos.x + PADDLE_WIDTH &&\
-            ball_pos.y - BALL_HEIGHT > left_paddle_pos.y &&\
+            ball_pos.y > left_paddle_pos.y - BALL_HEIGHT &&\
             ball_pos.y < left_paddle_pos.y + PADDLE_HEIGHT {
         ball_pos.x = left_paddle_pos.x + PADDLE_WIDTH
-        ball_vel.x *= -1
+        ball_vel.x *= -1.05
+        ball_vel.y *= 1.05
     } else if ball_pos.x >= right_paddle_pos.x - BALL_WIDTH &&\
-            ball_pos.y - BALL_HEIGHT > right_paddle_pos.y &&\
-            ball_pos.y < right_paddle_pos.y {
+            ball_pos.y > right_paddle_pos.y - BALL_HEIGHT &&\
+            ball_pos.y < right_paddle_pos.y + PADDLE_HEIGHT {
         ball_pos.x = right_paddle_pos.x - BALL_WIDTH
-        ball_vel.x *= -1
+        ball_vel.x *= -1.05
+        ball_vel.y *= 1.05
     }
 
+    // Ball-wall collision.
     if ball_pos.y >= screen_height - BALL_HEIGHT {
         ball_pos.y = screen_height - BALL_HEIGHT
         ball_vel.y *= -1
@@ -85,6 +89,7 @@ update_game :: proc() {
         ball_vel.y *= -1
     }
 
+    // Paddle-wall collision
     if left_paddle_pos.y >= screen_height - PADDLE_HEIGHT {
         left_paddle_pos.y = screen_height - PADDLE_HEIGHT
         left_paddle_vel.y = min(0, left_paddle_vel.y)
@@ -92,7 +97,6 @@ update_game :: proc() {
         left_paddle_pos.y = 0
         left_paddle_vel.y = max(0, left_paddle_vel.y)
     }
-
     if right_paddle_pos.y >= screen_height - PADDLE_HEIGHT {
         right_paddle_pos.y = screen_height - PADDLE_HEIGHT
         right_paddle_vel.y = min(0, right_paddle_vel.y)
@@ -101,7 +105,7 @@ update_game :: proc() {
         right_paddle_vel.y = max(0, right_paddle_vel.y)
     }
 
-    // Update.
+    // Update. /////////////////////////////////////////////////////////////////
     ball_pos += ball_vel * frame_time
     left_paddle_pos += left_paddle_vel * frame_time
     right_paddle_pos += right_paddle_vel * frame_time
