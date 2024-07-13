@@ -57,7 +57,7 @@ main :: proc() {
 
     init_game()
 
-    rl.SetTargetFPS(60)
+    rl.SetTargetFPS(144)
 
     message = "Press Enter to begin"
     wait_for_key(.ENTER)
