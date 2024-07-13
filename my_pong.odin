@@ -38,14 +38,14 @@ FONT_SMALL :: 32
 FONT_MEDIUM :: 64
 FONT_LARGE :: 96
 
-WINNING_SCORE :: 3
+WINNING_SCORE :: 2
 player_score := 0
 ai_score := 0
-SCORE_FREEZE_DURATION :: 1.5  // Seconds
-score_freeze_duration_remaining : f32
 
 round_timer : f32
 message: cstring
+
+draw_ball: bool
 
 paused := false
 
@@ -80,8 +80,8 @@ init_game :: proc() {
     ball_vel = BALL_INITIAL_VELOCITY * (1 + 0.1 * f32(player_score + ai_score))
     player_score = 0
     ai_score = 0
-    score_freeze_duration_remaining = 0
     round_timer = 0
+    draw_ball = true
 }
 
 update_game :: proc() {
@@ -93,11 +93,6 @@ update_game :: proc() {
         return
         // TODO(melmer): Instead, call `wait_to_unpause` procedure. OR WAIT,
         // maybe instead simply use `wait_for_key(.P)`
-    }
-
-    if score_freeze_duration_remaining > 0 {
-        score_freeze_duration_remaining -= frame_time
-        return
     }
 
     round_timer += frame_time
@@ -196,9 +191,13 @@ update_game :: proc() {
             ai_score += 1
             message = "Opponent scored."
         }
-        score_freeze_duration_remaining = SCORE_FREEZE_DURATION
-        ball_pos = {0.5 * (screen_width + BALL_WIDTH), 0.5 * (screen_height + BALL_HEIGHT)}
+        draw_ball = false
+        timeout(2)
+        draw_ball = true
+        ball_pos = {0.5 * (screen_width - BALL_WIDTH), 0.5 * (screen_height - BALL_HEIGHT)}
         ball_vel = BALL_INITIAL_VELOCITY * (1 + 0.1 * f32(player_score + ai_score))
+        left_paddle_pos = {PADDLE_WIDTH, 0.5 * INITIAL_SCREEN_HEIGHT - 0.5 * PADDLE_HEIGHT}
+        right_paddle_pos = {INITIAL_SCREEN_WIDTH - 2 * PADDLE_WIDTH, 0.5 * INITIAL_SCREEN_HEIGHT - 0.5 * PADDLE_HEIGHT}
     }
     player_scored = false
     ai_scored = false
@@ -260,7 +259,7 @@ draw_game :: proc() {
     rl.DrawRectangleV(left_paddle_pos, {PADDLE_WIDTH, PADDLE_HEIGHT}, PADDLE_COLOR)
     rl.DrawRectangleV(right_paddle_pos, {PADDLE_WIDTH, PADDLE_HEIGHT}, PADDLE_COLOR)
 
-    if score_freeze_duration_remaining <= 0 {
+    if draw_ball {
         rl.DrawRectangleV(ball_pos, {BALL_WIDTH, BALL_HEIGHT}, BALL_COLOR)
     }
 
