@@ -92,8 +92,6 @@ update_game :: proc() {
 
     if paused {
         return
-        // TODO(melmer): Instead, call `wait_to_unpause` procedure. OR WAIT,
-        // maybe instead simply use `wait_for_key(.P)`
     }
 
     round_timer += frame_time
