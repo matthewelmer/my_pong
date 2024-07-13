@@ -91,7 +91,8 @@ update_game :: proc() {
 
     if paused {
         return
-        // TODO(melmer): Instead, call `wait_to_unpause` procedure.
+        // TODO(melmer): Instead, call `wait_to_unpause` procedure. OR WAIT,
+        // maybe instead simply use `wait_for_key(.P)`
     }
 
     if score_freeze_duration_remaining > 0 {
@@ -124,6 +125,11 @@ update_game :: proc() {
     } else {
         left_paddle_vel.y = math.clamp(ball_vel.y, -PADDLE_SPEED, PADDLE_SPEED)
     }
+    // FUTURE WORK(melmer): Could be smarter by taking into account the sign of
+    // the velocity of the ball and trying to lead it such that it gets its
+    // paddle off the wall just a bit quicker.
+    // FUTURE WORK(melmer): Could be even smarter by predicting one or more
+    // bounces, possibly with random precision based on difficulty level.
 
     // Physics /////////////////////////////////////////////////////////////////
     // TODO(melmer): Change reflection angle based on where ball hits paddle.
@@ -143,7 +149,8 @@ update_game :: proc() {
         ball_vel.x *= -1.1
         ball_vel.y *= 1.1
     }
-    // TODO(melmer): Ball-side of paddle collision
+    // TODO(melmer): Ball and side-of-paddle collision
+    // TODO(melmer): Perhaps use RayLib's collision detection functions
 
     // Ball-wall collision
     if ball_pos.y >= screen_height - BALL_HEIGHT {
@@ -204,7 +211,6 @@ update_game :: proc() {
         } else if ai_won {
             message = "You lost."
         }
-        draw_game()
         timeout(2)
         message = "Press Enter to restart."
         wait_for_key(.ENTER)
