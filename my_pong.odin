@@ -2,6 +2,7 @@ package main
 
 import "core:fmt"
 import "core:math"
+import "core:math/linalg"
 import "core:strings"
 import rl "vendor:raylib"
 
@@ -127,22 +128,41 @@ update_game :: proc() {
     // bounces, possibly with random precision based on difficulty level.
 
     // Physics /////////////////////////////////////////////////////////////////
-    // TODO(melmer): Change reflection angle based on where ball hits paddle.
     // Ball-paddle collision
     if ball_pos.x <= left_paddle_pos.x + PADDLE_WIDTH &&\
             ball_pos_prev.x >= left_paddle_pos.x + PADDLE_WIDTH &&\
             ball_pos.y > left_paddle_pos.y - BALL_HEIGHT &&\
             ball_pos.y < left_paddle_pos.y + PADDLE_HEIGHT {
+        // Map collision y to -1, 1
+        max_collision_y := left_paddle_pos.y + PADDLE_HEIGHT
+        min_collision_y := left_paddle_pos.y - BALL_HEIGHT
+        mapped_collision_y := 2 * (ball_pos.y - min_collision_y) / (max_collision_y - min_collision_y) - 1
+
+        // Use mapped collision y to determine reflection angle
+        y_frac := mapped_collision_y + 0.25 * math.sign(mapped_collision_y) * (1 - mapped_collision_y)
+        x_frac := 1 - abs(y_frac)
+        ball_speed := linalg.vector_length(ball_vel)
+
         ball_pos.x = left_paddle_pos.x + PADDLE_WIDTH
-        ball_vel.x *= -1.1
-        ball_vel.y *= 1.1
+        ball_vel.x = -(ball_vel.x - 0.25 * ball_speed * x_frac)
+        ball_vel.y = (ball_vel.y + 0.25 * ball_speed * y_frac)
     } else if ball_pos.x >= right_paddle_pos.x - BALL_WIDTH &&\
             ball_pos_prev.x <= right_paddle_pos.x - BALL_WIDTH &&\
             ball_pos.y > right_paddle_pos.y - BALL_HEIGHT &&\
             ball_pos.y < right_paddle_pos.y + PADDLE_HEIGHT {
+        // Map collision y to -1, 1
+        max_collision_y := right_paddle_pos.y + PADDLE_HEIGHT
+        min_collision_y := right_paddle_pos.y - BALL_HEIGHT
+        mapped_collision_y := 2 * (ball_pos.y - min_collision_y) / (max_collision_y - min_collision_y) - 1
+
+        // Use mapped collision y to determine reflection angle
+        y_frac := mapped_collision_y + 0.25 * math.sign(mapped_collision_y) * (1 - mapped_collision_y)
+        x_frac := 1 - abs(y_frac)
+        ball_speed := linalg.vector_length(ball_vel)
+
         ball_pos.x = right_paddle_pos.x - BALL_WIDTH
-        ball_vel.x *= -1.1
-        ball_vel.y *= 1.1
+        ball_vel.x = -(ball_vel.x + 0.25 * ball_speed * x_frac)
+        ball_vel.y = (ball_vel.y + 0.25 * ball_speed * y_frac)
     }
     // TODO(melmer): Ball and side-of-paddle collision
     // TODO(melmer): Perhaps use RayLib's collision detection functions
