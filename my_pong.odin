@@ -39,7 +39,7 @@ FONT_SMALL :: 32
 FONT_MEDIUM :: 64
 FONT_LARGE :: 96
 
-WINNING_SCORE :: 2
+WINNING_SCORE :: 3
 player_score := 0
 ai_score := 0
 
