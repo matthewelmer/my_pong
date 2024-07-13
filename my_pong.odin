@@ -16,65 +16,98 @@ PADDLE_COLOR :: rl.RAYWHITE
 PADDLE_HEIGHT : f32 : 112
 PADDLE_WIDTH : f32 : 24
 PADDLE_SPEED : f32 : 300
-left_paddle_pos := rl.Vector2{PADDLE_WIDTH, 0.5 * INITIAL_SCREEN_HEIGHT - 0.5 * PADDLE_HEIGHT}
-right_paddle_pos := rl.Vector2{INITIAL_SCREEN_WIDTH - 2 * PADDLE_WIDTH, 0.5 * INITIAL_SCREEN_HEIGHT - 0.5 * PADDLE_HEIGHT}
+left_paddle_pos : rl.Vector2
+right_paddle_pos : rl.Vector2
 left_paddle_vel : rl.Vector2
 right_paddle_vel : rl.Vector2
 
 BALL_COLOR :: rl.RAYWHITE
 BALL_HEIGHT : f32 : 24
 BALL_WIDTH : f32 : 24
-BALL_INITIAL_SPEED : f32 : 200
+BALL_INITIAL_SPEED : f32 : 250
 BALL_INITIAL_VELOCITY :: rl.Vector2{
     BALL_INITIAL_SPEED / math.SQRT_TWO, BALL_INITIAL_SPEED / math.SQRT_TWO
 }
-ball_pos := rl.Vector2{0.5 * (INITIAL_SCREEN_WIDTH - BALL_WIDTH), 0.5 * (INITIAL_SCREEN_HEIGHT - BALL_HEIGHT)}
+ball_pos : rl.Vector2
 ball_pos_prev : rl.Vector2
-ball_vel := BALL_INITIAL_VELOCITY
+ball_vel : rl.Vector2
 
 frame_time : f32
 
-SCORE_FONT_SIZE :: 64
+FONT_SMALL :: 32
+FONT_MEDIUM :: 64
+FONT_LARGE :: 96
+
+WINNING_SCORE :: 3
 player_score := 0
 ai_score := 0
+SCORE_FREEZE_DURATION :: 1.5  // Seconds
+score_freeze_duration_remaining : f32
 
-game_over := false
+round_timer : f32
+message: cstring
+
 paused := false
 
-// Winner :: enum {PLAYER, AI}
-
 main :: proc() {
+    rl.SetTraceLogLevel(.ERROR)
+    rl.SetConfigFlags({.VSYNC_HINT})
     rl.InitWindow(INITIAL_SCREEN_WIDTH, INITIAL_SCREEN_HEIGHT, "My Pong")
     defer rl.CloseWindow()
 
-    // init_game()  // Will need this for restarts
+    init_game()
 
     rl.SetTargetFPS(60)
+
+    message = "Press Enter to begin"
+    wait_for_key(.ENTER)
 
     for !rl.WindowShouldClose() {
         screen_height = f32(rl.GetScreenHeight())
         screen_width = f32(rl.GetScreenWidth())
+        frame_time = rl.GetFrameTime()
         update_game()
         draw_game()
     }
 }
 
+init_game :: proc() {
+    screen_width = INITIAL_SCREEN_WIDTH
+    screen_height = INITIAL_SCREEN_HEIGHT
+    left_paddle_pos = {PADDLE_WIDTH, 0.5 * INITIAL_SCREEN_HEIGHT - 0.5 * PADDLE_HEIGHT}
+    right_paddle_pos = {INITIAL_SCREEN_WIDTH - 2 * PADDLE_WIDTH, 0.5 * INITIAL_SCREEN_HEIGHT - 0.5 * PADDLE_HEIGHT}
+    ball_pos = {0.5 * (screen_width - BALL_WIDTH), 0.5 * (screen_height - BALL_HEIGHT)}
+    ball_vel = BALL_INITIAL_VELOCITY * (1 + 0.1 * f32(player_score + ai_score))
+    player_score = 0
+    ai_score = 0
+    score_freeze_duration_remaining = 0
+    round_timer = 0
+}
+
 update_game :: proc() {
-    if game_over {
-
-    }
-
     if rl.IsKeyPressed(.P) {
         paused = !paused
     }
 
     if paused {
         return
+        // TODO(melmer): Instead, call `wait_to_unpause` procedure.
     }
 
-    frame_time = rl.GetFrameTime()
+    if score_freeze_duration_remaining > 0 {
+        score_freeze_duration_remaining -= frame_time
+        return
+    }
 
-    // Input.
+    round_timer += frame_time
+
+    if round_timer > 2 {
+        message = ""
+    } else {
+        message = rl.TextFormat("First to %d wins!", WINNING_SCORE)
+    }
+
+    // Input
     if rl.IsKeyDown(.UP) {
         right_paddle_vel.y = -PADDLE_SPEED
     } else if rl.IsKeyDown(.DOWN) {
@@ -83,7 +116,7 @@ update_game :: proc() {
         right_paddle_vel.y = 0
     }
 
-    // AI. /////////////////////////////////////////////////////////////////////
+    // AI //////////////////////////////////////////////////////////////////////
     if ball_pos.y + 0.5 * BALL_HEIGHT < left_paddle_pos.y + 0.4 * PADDLE_HEIGHT {
         left_paddle_vel.y = -PADDLE_SPEED
     } else if ball_pos.y + 0.5 * BALL_HEIGHT > left_paddle_pos.y + 0.6 * PADDLE_HEIGHT {
@@ -92,26 +125,27 @@ update_game :: proc() {
         left_paddle_vel.y = math.clamp(ball_vel.y, -PADDLE_SPEED, PADDLE_SPEED)
     }
 
-    // Physics. ////////////////////////////////////////////////////////////////
+    // Physics /////////////////////////////////////////////////////////////////
     // TODO(melmer): Change reflection angle based on where ball hits paddle.
-    // Ball-paddle collision.
+    // Ball-paddle collision
     if ball_pos.x <= left_paddle_pos.x + PADDLE_WIDTH &&\
             ball_pos_prev.x >= left_paddle_pos.x + PADDLE_WIDTH &&\
             ball_pos.y > left_paddle_pos.y - BALL_HEIGHT &&\
             ball_pos.y < left_paddle_pos.y + PADDLE_HEIGHT {
         ball_pos.x = left_paddle_pos.x + PADDLE_WIDTH
-        ball_vel.x *= -1.05
-        ball_vel.y *= 1.05
+        ball_vel.x *= -1.1
+        ball_vel.y *= 1.1
     } else if ball_pos.x >= right_paddle_pos.x - BALL_WIDTH &&\
             ball_pos_prev.x <= right_paddle_pos.x - BALL_WIDTH &&\
             ball_pos.y > right_paddle_pos.y - BALL_HEIGHT &&\
             ball_pos.y < right_paddle_pos.y + PADDLE_HEIGHT {
         ball_pos.x = right_paddle_pos.x - BALL_WIDTH
-        ball_vel.x *= -1.05
-        ball_vel.y *= 1.05
+        ball_vel.x *= -1.1
+        ball_vel.y *= 1.1
     }
+    // TODO(melmer): Ball-side of paddle collision
 
-    // Ball-wall collision.
+    // Ball-wall collision
     if ball_pos.y >= screen_height - BALL_HEIGHT {
         ball_pos.y = screen_height - BALL_HEIGHT
         ball_vel.y *= -1
@@ -138,35 +172,68 @@ update_game :: proc() {
 
     ball_pos_prev = ball_pos
 
-    // Update. /////////////////////////////////////////////////////////////////
+    // Update //////////////////////////////////////////////////////////////////
+    // Move things
     ball_pos += ball_vel * frame_time
     left_paddle_pos += left_paddle_vel * frame_time
     right_paddle_pos += right_paddle_vel * frame_time
 
-    // TODO(melmer): Check for back wall collision and award victory/defeat
-    if ball_pos.x <= 0 {
-        player_score += 1
-        start_new_point("You")
-    } else if ball_pos.x + BALL_WIDTH >= screen_width {
-        ai_score += 1
-        start_new_point("Opponent")
+    // Track score
+    player_scored := ball_pos.x <= 0
+    ai_scored := ball_pos.x + BALL_WIDTH >= screen_width
+    if player_scored || ai_scored {
+        if player_scored {
+            player_score += 1
+            message = "You scored!"
+        } else if ai_scored {
+            ai_score += 1
+            message = "Opponent scored."
+        }
+        score_freeze_duration_remaining = SCORE_FREEZE_DURATION
+        ball_pos = {0.5 * (screen_width + BALL_WIDTH), 0.5 * (screen_height + BALL_HEIGHT)}
+        ball_vel = BALL_INITIAL_VELOCITY * (1 + 0.1 * f32(player_score + ai_score))
+    }
+    player_scored = false
+    ai_scored = false
+
+    player_won := player_score >= WINNING_SCORE
+    ai_won := ai_score >= WINNING_SCORE
+    if player_won || ai_won {
+        if player_won {
+            message = "You won!"
+        } else if ai_won {
+            message = "You lost."
+        }
+        draw_game()
+        timeout(2)
+        message = "Press Enter to restart."
+        wait_for_key(.ENTER)
+        init_game()
     }
 }
 
-// TODO(melmer): Do this a different way. Set a flag like how you did for pause.
-start_new_point :: proc(scorer: string) {
-    rl.BeginDrawing()
-    defer rl.EndDrawing()
+timeout :: proc(duration: f32) {
+    timeout_remaining := duration
+    for timeout_remaining > 0 {
+        draw_game()
+        if rl.WindowShouldClose() {
+            rl.CloseWindow()
+        }
+        timeout_remaining -= rl.GetFrameTime()
+    }
+}
 
-    ball_pos = {0.5 * (screen_width + BALL_WIDTH), 0.5 * (screen_height + BALL_HEIGHT)}
-
-    // score_text := fmt.tprintf("%v scored a point!", scorer)
-    // objective_text_width := len(score_text) * SCORE_FONT_SIZE
-    // rl.DrawText(strings.clone_to_cstring(score_text), i32(0.5 * (screen_width - 0.5 * f32(objective_text_width))), i32(0.75 * screen_height), SCORE_FONT_SIZE, rl.LIGHTGRAY)
-    
-    // rl.WaitTime(3)
-
-    ball_vel = BALL_INITIAL_VELOCITY * (1 + 0.1 * f32(player_score + ai_score))
+wait_for_key :: proc(key: rl.KeyboardKey) {
+    waiting_for_key := true
+    for waiting_for_key {
+        if rl.IsKeyPressed(key) {
+            waiting_for_key = false
+        }
+        if rl.WindowShouldClose() {
+            rl.CloseWindow()
+        }
+        draw_game()
+    }
 }
 
 draw_game :: proc() {
@@ -175,18 +242,21 @@ draw_game :: proc() {
 
     rl.ClearBackground(BACKGROUND_COLOR)
 
-    player_score_str := fmt.tprintf("%v", player_score)
-    ai_score_str := fmt.tprintf("%v", ai_score)
-
-    objective_text: cstring = "First to 5 wins!"
-    objective_text_width := len(objective_text) * SCORE_FONT_SIZE
-    rl.DrawText(objective_text, i32(0.5 * (screen_width - 0.5 * f32(objective_text_width))), i32(0.5 * screen_height), SCORE_FONT_SIZE, rl.LIGHTGRAY)
-    rl.DrawText(strings.clone_to_cstring(player_score_str), i32(0.5 * screen_width + 256), i32(0.5 * screen_height - 256), SCORE_FONT_SIZE, rl.LIGHTGRAY)
-    rl.DrawText(strings.clone_to_cstring(ai_score_str), i32(0.5 * screen_width - 256 - SCORE_FONT_SIZE), i32(screen_height / 2 - 256), SCORE_FONT_SIZE, rl.LIGHTGRAY)
+    message_width := rl.MeasureText(message, FONT_MEDIUM)
+    player_score_text := rl.TextFormat("%d", player_score)
+    player_score_text_width := rl.MeasureText(player_score_text, FONT_MEDIUM)
+    ai_score_text := rl.TextFormat("%d", ai_score)
+    ai_score_text_width := rl.MeasureText(ai_score_text, FONT_MEDIUM)
+    rl.DrawText(message, i32(0.5 * (screen_width - f32(message_width))), i32(0.75 * screen_height - FONT_MEDIUM), FONT_MEDIUM, rl.LIGHTGRAY)
+    rl.DrawText(player_score_text, i32(0.75 * screen_width - f32(player_score_text_width)), i32(0.25 * screen_height - FONT_MEDIUM), FONT_MEDIUM, rl.LIGHTGRAY)
+    rl.DrawText(ai_score_text,     i32(0.25 * screen_width - f32(ai_score_text_width)),     i32(0.25 * screen_height - FONT_MEDIUM), FONT_MEDIUM, rl.LIGHTGRAY)
 
     rl.DrawRectangleV(left_paddle_pos, {PADDLE_WIDTH, PADDLE_HEIGHT}, PADDLE_COLOR)
     rl.DrawRectangleV(right_paddle_pos, {PADDLE_WIDTH, PADDLE_HEIGHT}, PADDLE_COLOR)
-    rl.DrawRectangleV(ball_pos, {BALL_WIDTH, BALL_HEIGHT}, BALL_COLOR)
+
+    if score_freeze_duration_remaining <= 0 {
+        rl.DrawRectangleV(ball_pos, {BALL_WIDTH, BALL_HEIGHT}, BALL_COLOR)
+    }
 
     rl.DrawFPS(0, 0)
 }
